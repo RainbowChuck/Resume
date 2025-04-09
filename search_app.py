@@ -40,8 +40,13 @@ async def form_page(request: Request):
 
 @app.post("/search", response_class=HTMLResponse)
 async def search_resume(request: Request, query: str = Form(...)):
-    query_vec = model.encode([query])
-    _, indices = nn.kneighbors([query_vec], n_neighbors=10)
+    # Убираем лишнее преобразование в список
+    query_vec = model.encode(query)  # Возвращает массив размерности (n_features,)
+
+    # Добавляем новую ось для совместимости с NearestNeighbors
+    query_vec = query_vec.reshape(1, -1)  # Преобразуем в массив размерности (1, n_features)
+
+    _, indices = nn.kneighbors(query_vec, n_neighbors=10)
 
     results = []
     for idx in indices[0]:
@@ -59,14 +64,14 @@ async def search_resume(request: Request, query: str = Form(...)):
     with open(HISTORY_PATH, "a", encoding="utf-8", newline='') as f:
         writer = csv.writer(f)
         for res in results:
-            writer.writerow([timestamp, query, res["position"], res["experience"], res["city"], res["education"], res["salary"]])
+            writer.writerow(
+                [timestamp, query, res["position"], res["experience"], res["city"], res["education"], res["salary"]])
 
     # === Сохраняем Excel ===
     df = pd.DataFrame(results)
     df.to_excel(EXCEL_PATH, index=False)
 
     return templates.TemplateResponse("form.html", {"request": request, "results": results, "query": query})
-
 
 @app.get("/download", response_class=FileResponse)
 async def download_excel():
