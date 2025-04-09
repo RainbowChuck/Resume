@@ -1,3 +1,4 @@
+import ijson
 import json
 import os
 
@@ -5,24 +6,30 @@ SOURCE_PATH = os.path.join("data", "cv.json")
 DEST_PATH = os.path.join("data", "cv_10k.json")
 LIMIT = 10000
 
-def extract_10k_resumes():
-    selected = []
-    with open(SOURCE_PATH, 'r', encoding='utf-8') as infile:
-        for i, line in enumerate(infile):
-            if i >= LIMIT:
-                break
-            try:
-                record = json.loads(line.strip())
-                selected.append(record)
-            except json.JSONDecodeError:
-                continue
+def extract_from_nested_json():
+    # Проверка существования исходного файла
+    if not os.path.exists(SOURCE_PATH):
+        print(f"Ошибка: файл {SOURCE_PATH} не найден.")
+        return
 
-    with open(DEST_PATH, 'w', encoding='utf-8') as outfile:
-        for item in selected:
-            json.dump(item, outfile, ensure_ascii=False)
-            outfile.write('\n')
+    try:
+        # Открытие исходного файла и целевого файла
+        with open(SOURCE_PATH, 'r', encoding='utf-8') as f, \
+             open(DEST_PATH, 'w', encoding='utf-8') as out:
+            count = 0
 
-    print(f"Сохранено {len(selected)} резюме в файл: {DEST_PATH}")
+            # Использование ijson для потокового чтения массива "cvs"
+            for item in ijson.items(f, "cvs.item"):
+                if count >= LIMIT:
+                    break
+                json.dump(item, out, ensure_ascii=False)
+                out.write('\n')
+                count += 1
+
+        print(f"Сохранено {count} резюме в файл: {DEST_PATH}")
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
 
 if __name__ == "__main__":
-    extract_10k_resumes()
+    extract_from_nested_json()
