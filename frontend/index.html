@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск резюме</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        input, textarea { width: 100%; padding: 10px; margin-top: 10px; font-size: 1em; }
+        button { padding: 10px 20px; font-size: 1em; margin-top: 10px; }
+        .result { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+        .result h3 { margin: 0; }
+    </style>
+</head>
+<body>
+    <h1>Поиск подходящих резюме</h1>
+    <textarea id="query" rows="4" placeholder="Введите описание кандидата..."></textarea>
+    <button onclick="search()">Найти</button>
+
+    <div id="results"></div>
+
+    <script>
+        async function search() {
+            const query = document.getElementById('query').value;
+            const response = await fetch('http://127.0.0.1:8000/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query })
+            });
+
+            const data = await response.json();
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (data.results && data.results.length > 0) {
+                data.results.forEach((res, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'result';
+                    div.innerHTML = `
+                        <h3>Кандидат #${i + 1}</h3>
+                        <p><strong>Должность:</strong> ${res.position}</p>
+                        <p><strong>Опыт:</strong> ${res.experience} лет</p>
+                        <p><strong>Город:</strong> ${res.city}</p>
+                        <p><strong>Образование:</strong> ${res.education}</p>
+                        <p><strong>Желаемая зарплата:</strong> ${res.salary} руб.</p>
+                    `;
+                    resultsDiv.appendChild(div);
+                });
+            } else {
+                resultsDiv.innerHTML = '<p>Резюме не найдены.</p>';
+            }
+        }
+    </script>
+</body>
+</html>

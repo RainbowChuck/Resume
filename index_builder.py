@@ -196,8 +196,11 @@ def create_index(progress_callback):
 
 # Функция для запуска процесса в отдельном потоке
 def start_index_creation():
+    start_button.config(state=tk.DISABLED)
+
     def run_task():
         create_index(update_progress)
+        start_button.config(state=tk.NORMAL)
 
     thread = Thread(target=run_task)
     thread.start()
