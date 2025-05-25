@@ -98,6 +98,11 @@ def home():
 def login_form(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
+@app.get("/logout")
+def logout():
+    response = RedirectResponse(url="/login", status_code=302)
+    response.delete_cookie("access_token")
+    return response
 
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
