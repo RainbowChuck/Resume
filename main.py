@@ -147,6 +147,28 @@ def register(
     response = RedirectResponse(url="/login", status_code=302)
     return response
 
+@app.get("/history", response_class=HTMLResponse)
+def get_history(request: Request, city: str = "", start: str = "", end: str = ""):
+    # Заглушка (будущая БД: SearchHistory)
+    dummy_data = [
+        {"query": "Учитель истории", "date": "2024-05-01", "city": "Москва", "results": 10},
+        {"query": "Data Scientist", "date": "2024-05-10", "city": "Санкт-Петербург", "results": 25},
+    ]
+
+    # Фильтрация
+    filtered = []
+    for row in dummy_data:
+        if city and city not in row["city"]:
+            continue
+        if start and row["date"] < start:
+            continue
+        if end and row["date"] > end:
+            continue
+        filtered.append(row)
+
+    return templates.TemplateResponse("history.html", {"request": request, "history": filtered})
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, token: str = Depends(oauth2_scheme)):
     try:
