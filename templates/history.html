@@ -1,0 +1,47 @@
+<!-- templates/history.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>История запросов</title>
+</head>
+<body>
+  <h1>История запросов</h1>
+
+  <form method="get" action="/history">
+    <label>Город:</label>
+    <select name="city">
+      <option value="">Все</option>
+      <option value="Москва">Москва</option>
+      <option value="Санкт-Петербург">Санкт-Петербург</option>
+      <option value="Новосибирск">Новосибирск</option>
+    </select>
+
+    <label>Период:</label>
+    <input type="date" name="start"> —
+    <input type="date" name="end">
+
+    <button type="submit">Фильтр</button>
+  </form>
+
+  <br>
+  <table border="1" cellpadding="5">
+    <tr>
+      <th>Запрос</th>
+      <th>Дата</th>
+      <th>Город</th>
+      <th>Результатов</th>
+    </tr>
+    {% for row in history %}
+    <tr>
+      <td>{{ row.query }}</td>
+      <td>{{ row.date }}</td>
+      <td>{{ row.city }}</td>
+      <td>{{ row.results }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <br><a href="/dashboard">← Назад</a>
+</body>
+</html>
