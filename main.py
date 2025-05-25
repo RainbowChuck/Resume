@@ -67,6 +67,7 @@
 # @app.get("/")
 # def read_root(request: Request):
 #     return templates.TemplateResponse("index.html", {"request": request})
+from http.client import HTTPException
 
 # @app.get("/")
 # def read_root(request: Request):
@@ -79,9 +80,10 @@ from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 
-from auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM
+from auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM, hash_password
 from database import get_db
 from models import User
+from schemas import UserOut, UserCreate
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -126,3 +128,18 @@ def dashboard(request: Request, token: str = Depends(oauth2_scheme)):
         return RedirectResponse("/login")
 
     return templates.TemplateResponse("dashboard.html", {"request": request, "username": username})
+
+@app.post("/users/", response_model=UserOut)
+def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == user_in.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    user = User(
+        username=user_in.username,
+        hashed_password=hash_password(user_in.password),
+        role="hr"  # можно изменить на "dean" или "admin"
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

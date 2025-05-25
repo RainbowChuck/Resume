@@ -1,4 +1,6 @@
 # schemas.py
+from datetime import datetime
+
 from pydantic import BaseModel
 from typing import Optional
 
@@ -9,7 +11,9 @@ class UserCreate(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
-    created_at: Optional[str]
+    role: str
+    created_at: Optional[datetime]
+
     model_config = {
         "from_attributes": True
     }
