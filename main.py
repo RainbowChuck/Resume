@@ -117,6 +117,35 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response
 
+@app.get("/register", response_class=HTMLResponse)
+def show_register_form(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@app.post("/register")
+def register(
+    username: str = Form(...),
+    password: str = Form(...),
+    role: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
+        return templates.TemplateResponse("register.html", {
+            "request": {},
+            "error": "Пользователь уже существует"
+        }, status_code=400)
+
+    user = User(
+        username=username,
+        hashed_password=hash_password(password),
+        role=role
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    response = RedirectResponse(url="/login", status_code=302)
+    return response
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, token: str = Depends(oauth2_scheme)):
