@@ -8,6 +8,8 @@ from tqdm import tqdm
 from sentence_transformers import SentenceTransformer
 from sklearn.neighbors import NearestNeighbors
 
+import search_10k
+
 # === Пути ===
 SOURCE_PATH = os.path.join("data", "cv.json")
 EXTRACTED_PATH = os.path.join("data", "cv_10k.json")
@@ -168,3 +170,4 @@ if __name__ == "__main__":
     extract_10k()
     build_index()
     search_loop()
+    #search_10k()

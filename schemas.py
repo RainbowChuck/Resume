@@ -10,8 +10,9 @@ class UserOut(BaseModel):
     id: int
     username: str
     created_at: Optional[str]
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class Token(BaseModel):
     access_token: str
