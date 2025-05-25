@@ -1,7 +1,10 @@
 # auth.py
+from fastapi import HTTPException
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
+
+from models import User
 
 # Секрет и алгоритм
 SECRET_KEY = "your-secret-key"
@@ -21,3 +24,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def check_role(user: User, allowed_roles: list[str]):
+    if user.role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Нет доступа")

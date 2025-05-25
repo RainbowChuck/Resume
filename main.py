@@ -67,13 +67,12 @@
 # @app.get("/")
 # def read_root(request: Request):
 #     return templates.TemplateResponse("index.html", {"request": request})
-from http.client import HTTPException
 
 # @app.get("/")
 # def read_root(request: Request):
 #     return templates.TemplateResponse("form.html", {"request": request}) #index.html
 
-from fastapi import FastAPI, Request, Form, Depends, status
+from fastapi import FastAPI, Request, Form, Depends, status, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
