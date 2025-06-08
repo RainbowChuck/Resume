@@ -81,7 +81,7 @@ from jose import jwt, JWTError
 
 from auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM, hash_password
 from database import get_db
-from models import User, SearchHistory
+from models import User, SearchHistory, Candidate
 from schemas import UserOut, UserCreate
 
 app = FastAPI()
@@ -183,7 +183,17 @@ def get_history(
         filtered.append(row)
 
     return templates.TemplateResponse("history.html", {"request": request, "history": filtered})
-
+@app.get("/candidates", response_class=HTMLResponse)
+def list_candidates(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    candidates = db.query(Candidate).filter(Candidate.user_id == current_user.id).all()
+    return templates.TemplateResponse("candidates.html", {
+        "request": request,
+        "candidates": candidates
+    })
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, token: str = Depends(oauth2_scheme)):
