@@ -195,6 +195,46 @@ def list_candidates(
         "candidates": candidates
     })
 
+from fastapi import Form
+from models import Candidate
+
+# Просмотр кандидата
+@app.get("/candidates/{candidate_id}", response_class=HTMLResponse)
+def view_candidate(candidate_id: int, request: Request,
+                   db: Session = Depends(get_db),
+                   current_user: User = Depends(get_current_user)):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id,
+                                           Candidate.user_id == current_user.id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Кандидат не найден")
+    return templates.TemplateResponse("candidate_detail.html", {
+        "request": request,
+        "candidate": candidate
+    })
+
+
+# Обновление статуса кандидата
+@app.post("/candidates/{candidate_id}/update")
+def update_candidate_status(candidate_id: int,
+                            action: str = Form(...),
+                            db: Session = Depends(get_db),
+                            current_user: User = Depends(get_current_user)):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id,
+                                           Candidate.user_id == current_user.id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Кандидат не найден")
+
+    if action == "approve":
+        candidate.status = "approved"
+    elif action == "reject":
+        candidate.status = "rejected"
+    elif action == "screen":
+        candidate.status = "screened"
+
+    db.commit()
+    return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, token: str = Depends(oauth2_scheme)):
     try:
