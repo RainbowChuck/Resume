@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Кандидаты</title>
+</head>
+<body>
+  <h2>Список кандидатов</h2>
+
+  <table border="1" cellpadding="5">
+    <tr>
+      <th>Имя</th>
+      <th>Email</th>
+      <th>Телефон</th>
+      <th>Статус</th>
+      <th>Действия</th>
+    </tr>
+    {% for candidate in candidates %}
+    <tr>
+      <td>{{ candidate.name }}</td>
+      <td>{{ candidate.email }}</td>
+      <td>{{ candidate.phone }}</td>
+      <td>{{ candidate.status }}</td>
+      <td>
+        <a href="/candidates/{{ candidate.id }}">Подробнее</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <br>
+  <a href="/dashboard">← Назад</a>
+</body>
+</html>
