@@ -11,7 +11,7 @@
 # from jose import JWTError, jwt
 #
 # app = FastAPI()
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 #
 # # Регистрация
 # @app.post("/users/", response_model=UserOut)
@@ -72,7 +72,7 @@
 # def read_root(request: Request):
 #     return templates.TemplateResponse("form.html", {"request": request}) #index.html
 
-from fastapi import FastAPI, Request, Form, Depends, status, HTTPException
+from fastapi import FastAPI, Request, Form, Depends, status, HTTPException, Cookie
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -83,7 +83,6 @@ from auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM, ha
 from database import get_db
 from models import User, SearchHistory, Candidate
 from schemas import UserOut, UserCreate
-
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
@@ -113,7 +112,7 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
 
     token = create_access_token({"sub": user.username})
 
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response
 
@@ -146,6 +145,27 @@ def register(
 
     response = RedirectResponse(url="/login", status_code=302)
     return response
+
+
+
+def get_current_user(access_token: str = Cookie(None), db: Session = Depends(get_db)) -> User:
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Not authenticated (no cookie)")
+
+    try:
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+    except JWTError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
 
 
 @app.get("/history", response_class=HTMLResponse)
@@ -195,8 +215,6 @@ def list_candidates(
         "candidates": candidates
     })
 
-from fastapi import Form
-from models import Candidate
 
 # Просмотр кандидата
 @app.get("/candidates/{candidate_id}", response_class=HTMLResponse)
@@ -236,14 +254,9 @@ def update_candidate_status(candidate_id: int,
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request, token: str = Depends(oauth2_scheme)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-    except JWTError:
-        return RedirectResponse("/login")
+def dashboard(request: Request, current_user: User = Depends(get_current_user)):
+    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
 
-    return templates.TemplateResponse("dashboard.html", {"request": request, "username": username})
 
 @app.post("/users/", response_model=UserOut)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
