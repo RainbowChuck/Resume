@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -23,4 +23,22 @@ class SearchHistory(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="history")
+
+
+class Candidate(Base):
+    __tablename__ = "candidates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    email = Column(String)
+    phone = Column(String)
+    resume_text = Column(Text)
+    status = Column(String, default="initial")  # initial, screened, approved, rejected
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("User", back_populates="candidates")
+
+User.candidates = relationship("Candidate", back_populates="user")
 
