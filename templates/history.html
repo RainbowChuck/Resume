@@ -34,11 +34,12 @@
     </tr>
     {% for row in history %}
     <tr>
-      <td>{{ row.query }}</td>
-      <td>{{ row.date }}</td>
-      <td>{{ row.city }}</td>
-      <td>{{ row.results }}</td>
-    </tr>
+  <td>{{ row.query }}</td>
+  <td>{{ row.date.strftime("%Y-%m-%d") }}</td>
+  <td>{{ row.city }}</td>
+  <td>{{ row.results }}</td>
+</tr>
+
     {% endfor %}
   </table>
 
