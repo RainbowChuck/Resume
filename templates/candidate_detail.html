@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Кандидат: {{ candidate.name }}</title>
+</head>
+<body>
+  <h2>Кандидат: {{ candidate.name }}</h2>
+
+  <p><strong>Email:</strong> {{ candidate.email }}</p>
+  <p><strong>Телефон:</strong> {{ candidate.phone }}</p>
+  <p><strong>Статус:</strong> {{ candidate.status }}</p>
+  <p><strong>Резюме:</strong></p>
+  <pre>{{ candidate.resume_text }}</pre>
+
+  <form method="post" action="/candidates/{{ candidate.id }}/update">
+    <button type="submit" name="action" value="approve">✅ Одобрить</button>
+    <button type="submit" name="action" value="reject">❌ Отклонить</button>
+  </form>
+
+  <br>
+  <a href="/candidates">← Назад</a>
+</body>
+</html>
