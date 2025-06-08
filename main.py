@@ -81,7 +81,7 @@ from jose import jwt, JWTError
 
 from auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM, hash_password
 from database import get_db
-from models import User
+from models import User, SearchHistory
 from schemas import UserOut, UserCreate
 
 app = FastAPI()
@@ -147,13 +147,29 @@ def register(
     response = RedirectResponse(url="/login", status_code=302)
     return response
 
+
 @app.get("/history", response_class=HTMLResponse)
-def get_history(request: Request, city: str = "", start: str = "", end: str = ""):
-    # Заглушка (будущая БД: SearchHistory)
-    dummy_data = [
-        {"query": "Учитель истории", "date": "2024-05-01", "city": "Москва", "results": 10},
-        {"query": "Data Scientist", "date": "2024-05-10", "city": "Санкт-Петербург", "results": 25},
-    ]
+def get_history(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    city: str = "",
+    start: str = "",
+    end: str = ""
+):
+    query = db.query(SearchHistory).filter(SearchHistory.user_id == current_user.id)
+
+    if city:
+        query = query.filter(SearchHistory.city.ilike(f"%{city}%"))
+    if start:
+        query = query.filter(SearchHistory.date >= start)
+    if end:
+        query = query.filter(SearchHistory.date <= end)
+
+    results = query.order_by(SearchHistory.date.desc()).all()
+
+    return templates.TemplateResponse("history.html", {"request": request, "history": results})
+
 
     # Фильтрация
     filtered = []
