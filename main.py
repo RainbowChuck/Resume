@@ -378,9 +378,67 @@ def perform_search(
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request, current_user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
+def dashboard(
+        request: Request,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role == "admin":
+        # Get statistics for admin dashboard
+        total_users = db.query(User).count()
+        total_candidates = db.query(Candidate).count()
+        total_searches = db.query(SearchHistory).count()
+        approved_candidates = db.query(Candidate).filter(Candidate.status == "approved").count()
 
+        # Get all users for management
+        users = db.query(User).all()
+
+        # Get recent actions
+        recent_actions = db.query(UserAction).order_by(UserAction.created_at.desc()).limit(10).all()
+
+        return templates.TemplateResponse("admin_dashboard.html", {
+            "request": request,
+            "user": current_user,
+            "total_users": total_users,
+            "total_candidates": total_candidates,
+            "total_searches": total_searches,
+            "approved_candidates": approved_candidates,
+            "users": users,
+            "recent_actions": recent_actions
+        })
+    elif current_user.role == "hr":
+        return templates.TemplateResponse("hr_dashboard.html", {
+            "request": request,
+            "user": current_user
+        })
+    elif current_user.role == "dean":
+        # Get candidates waiting for final approval
+        pending_candidates = db.query(Candidate).filter(
+            Candidate.status == "approved"
+        ).all()
+        return templates.TemplateResponse("dean_dashboard.html", {
+            "request": request,
+            "user": current_user,
+            "pending_candidates": pending_candidates
+        })
+    else:
+        raise HTTPException(status_code=403, detail="Invalid role")
+
+
+@app.post("/users/", response_model=UserOut)
+def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == user_in.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    user = User(
+        username=user_in.username,
+        hashed_password=hash_password(user_in.password),
+        role="hr"  # можно изменить на "dean" или "admin"
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 @app.post("/users/", response_model=UserOut)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
