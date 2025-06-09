@@ -524,3 +524,73 @@ def log_user_action(db: Session, user_id: int, action_type: str, description: st
     )
     db.add(action)
     db.commit()
+
+@app.get("/statistics", response_class=HTMLResponse)
+def statistics(
+    request: Request,
+    start_date: str = None,
+    end_date: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Set default date range if not provided
+    if not end_date:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+    # Convert string dates to datetime objects
+    start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+    end_datetime = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+
+    # Get basic statistics
+    total_users = db.query(User).count()
+    total_candidates = db.query(Candidate).count()
+    total_searches = db.query(SearchHistory).count()
+    approved_candidates = db.query(Candidate).filter(Candidate.status == "approved").count()
+
+    # Get candidate status distribution
+    status_counts = db.query(
+        Candidate.status,
+        func.count(Candidate.id)
+    ).group_by(Candidate.status).all()
+
+    candidate_status_labels = []
+    candidate_status_data = []
+    for status, count in status_counts:
+        candidate_status_labels.append(status)
+        candidate_status_data.append(count)
+
+    # Get user activity data
+    activity_data = db.query(
+        func.date(UserAction.created_at).label('date'),
+        func.count(UserAction.id).label('count')
+    ).filter(
+        UserAction.created_at >= start_datetime,
+        UserAction.created_at <= end_datetime
+    ).group_by(
+        func.date(UserAction.created_at)
+    ).all()
+
+    activity_dates = []
+    activity_counts = []
+    for date, count in activity_data:
+        activity_dates.append(date.strftime('%Y-%m-%d'))
+        activity_counts.append(count)
+
+    return templates.TemplateResponse("statistics.html", {
+        "request": request,
+        "start_date": start_date,
+        "end_date": end_date,
+        "total_users": total_users,
+        "total_candidates": total_candidates,
+        "total_searches": total_searches,
+        "approved_candidates": approved_candidates,
+        "candidate_status_labels": candidate_status_labels,
+        "candidate_status_data": candidate_status_data,
+        "activity_dates": activity_dates,
+        "activity_counts": activity_counts
+    })
