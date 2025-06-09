@@ -594,3 +594,70 @@ def statistics(
         "activity_dates": activity_dates,
         "activity_counts": activity_counts
     })
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(
+        request: Request,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Get or create settings
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "settings": settings
+    })
+
+
+@app.post("/settings")
+def update_settings(
+        request: Request,
+        system_name: str = Form(...),
+        items_per_page: int = Form(...),
+        search_engine: str = Form(...),
+        enable_semantic_search: bool = Form(False),
+        notify_new_candidates: bool = Form(False),
+        notify_status_changes: bool = Form(False),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings()
+        db.add(settings)
+
+    settings.system_name = system_name
+    settings.items_per_page = items_per_page
+    settings.search_engine = search_engine
+    settings.enable_semantic_search = enable_semantic_search
+    settings.notify_new_candidates = notify_new_candidates
+    settings.notify_status_changes = notify_status_changes
+
+    db.commit()
+    db.refresh(settings)
+
+    log_user_action(
+        db,
+        current_user.id,
+        "update_settings",
+        "System settings updated"
+    )
+
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "settings": settings,
+        "success": "Настройки успешно сохранены"
+    })
