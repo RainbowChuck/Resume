@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Редактирование пользователя</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .edit-container {
+            background: white;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+        }
+        .save-button {
+            background: #28a745;
+            color: white;
+        }
+        .cancel-button {
+            background: #6c757d;
+            color: white;
+        }
+        .delete-button {
+            background: #dc3545;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .error {
+            color: #dc3545;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="/dashboard">← Назад к панели управления</a>
+    </div>
+
+    <div class="edit-container">
+        <h1>Редактирование пользователя</h1>
+
+        {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/users/{{ user.id }}/edit">
+            <div class="form-group">
+                <label for="username">Имя пользователя:</label>
+                <input type="text" id="username" name="username" value="{{ user.username }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="role">Роль:</label>
+                <select id="role" name="role" required>
+                    <option value="hr" {% if user.role == "hr" %}selected{% endif %}>HR</option>
+                    <option value="dean" {% if user.role == "dean" %}selected{% endif %}>Dean</option>
+                    <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Новый пароль (оставьте пустым, чтобы не менять):</label>
+                <input type="password" id="password" name="password">
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="save-button">Сохранить изменения</button>
+                <a href="/dashboard" class="cancel-button" style="text-decoration: none; text-align: center;">Отмена</a>
+            </div>
+        </form>
+
+        <form method="POST" action="/users/{{ user.id }}/delete" style="margin-top: 20px;">
+            <button type="submit" class="delete-button" onclick="return confirm('Вы уверены, что хотите удалить этого пользователя?')">Удалить пользователя</button>
+        </form>
+    </div>
+</body>
+</html>
