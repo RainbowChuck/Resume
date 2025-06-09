@@ -304,6 +304,35 @@ def update_test_results(
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
 
 
+@app.post("/candidates/{candidate_id}/update_video_notes")
+def update_video_notes(
+        candidate_id: int,
+        video_interview_notes: str = Form(...),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "hr":
+        raise HTTPException(status_code=403, detail="Только HR может обновлять заметки по видео-интервью")
+
+    candidate = db.query(Candidate).filter(
+        Candidate.id == candidate_id,
+        Candidate.user_id == current_user.id
+    ).first()
+
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Кандидат не найден")
+
+    candidate.video_interview_notes = video_interview_notes
+    db.commit()
+    log_user_action(
+        db,
+        current_user.id,
+        "update_video_notes",
+        f"Updated video interview notes for candidate {candidate.name}"
+    )
+    return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, current_user: User = Depends(get_current_user)):
     return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
