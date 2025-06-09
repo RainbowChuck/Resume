@@ -9,10 +9,11 @@ class User(Base):
     username = Column(String, unique=True)
     hashed_password = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    role = Column(String, default="hr")
+    role = Column(String, default="hr") #hr, dean, admin
 
     history = relationship("SearchHistory", back_populates="user")
-
+    candidates = relationship("Candidate", back_populates="user")
+    actions = relationship("UserAction", back_populates="user")
 class SearchHistory(Base):
     __tablename__ = "search_history"
     id = Column(Integer, primary_key=True, index=True)
