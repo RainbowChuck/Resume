@@ -459,3 +459,68 @@ def edit_user_form(
         "request": request,
         "user": user
     })
+
+
+@app.post("/users/{user_id}/edit")
+def edit_user(
+        user_id: int,
+        username: str = Form(...),
+        role: str = Form(...),
+        password: str = Form(None),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if username is taken by another user
+    existing = db.query(User).filter(User.username == username, User.id != user_id).first()
+    if existing:
+        return templates.TemplateResponse("edit_user.html", {
+            "request": {},
+            "user": user,
+            "error": "Username already taken"
+        }, status_code=400)
+
+    user.username = username
+    user.role = role
+    if password:
+        user.hashed_password = hash_password(password)
+
+    db.commit()
+    return RedirectResponse(url="/dashboard", status_code=302)
+
+
+@app.post("/users/{user_id}/delete")
+def delete_user(
+        user_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+
+    db.delete(user)
+    db.commit()
+    return RedirectResponse(url="/dashboard", status_code=302)
+
+
+def log_user_action(db: Session, user_id: int, action_type: str, description: str):
+    action = UserAction(
+        user_id=user_id,
+        action_type=action_type,
+        description=description
+    )
+    db.add(action)
+    db.commit()
