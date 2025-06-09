@@ -341,6 +341,42 @@ def search_page(
         raise HTTPException(status_code=403, detail="Access denied")
     return templates.TemplateResponse("search.html", {"request": request})
 
+
+@app.post("/search", response_class=HTMLResponse)
+def perform_search(
+        request: Request,
+        query: str = Form(...),
+        city: str = Form(None),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role not in ["hr", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Save search to history
+    history_entry = SearchHistory(
+        query=query,
+        city=city,
+        user_id=current_user.id
+    )
+    db.add(history_entry)
+
+    # Perform search using search_app functionality
+    from search_app import search_resumes
+    results = search_resumes(query, city)
+
+    # Save number of results
+    history_entry.results = len(results)
+    db.commit()
+
+    return templates.TemplateResponse("search.html", {
+        "request": request,
+        "results": results,
+        "query": query,
+        "city": city
+    })
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, current_user: User = Depends(get_current_user)):
     return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
