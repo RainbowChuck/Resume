@@ -332,6 +332,14 @@ def update_video_notes(
     )
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
 
+@app.get("/search", response_class=HTMLResponse)
+def search_page(
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role not in ["hr", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return templates.TemplateResponse("search.html", {"request": request})
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, current_user: User = Depends(get_current_user)):
