@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Настройки системы</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .settings-container {
+            background: white;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .settings-section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .settings-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success-message {
+            color: #28a745;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="/dashboard">← Назад к панели управления</a>
+    </div>
+
+    <div class="settings-container">
+        <h1>Настройки системы</h1>
+
+        {% if success %}
+        <div class="success-message">
+            {{ success }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/settings">
+            <div class="settings-section">
+                <h2>Общие настройки</h2>
+                <div class="form-group">
+                    <label for="system_name">Название системы:</label>
+                    <input type="text" id="system_name" name="system_name" value="{{ settings.system_name }}">
+                </div>
+                <div class="form-group">
+                    <label for="items_per_page">Количество элементов на странице:</label>
+                    <input type="number" id="items_per_page" name="items_per_page" value="{{ settings.items_per_page }}" min="5" max="100">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h2>Настройки поиска</h2>
+                <div class="form-group">
+                    <label for="search_engine">Поисковая система:</label>
+                    <select id="search_engine" name="search_engine">
+                        <option value="default" {% if settings.search_engine == "default" %}selected{% endif %}>По умолчанию</option>
+                        <option value="advanced" {% if settings.search_engine == "advanced" %}selected{% endif %}>Расширенный</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enable_semantic_search" name="enable_semantic_search" {% if settings.enable_semantic_search %}checked{% endif %}>
+                        <label for="enable_semantic_search">Включить семантический поиск</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h2>Настройки уведомлений</h2>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="notify_new_candidates" name="notify_new_candidates" {% if settings.notify_new_candidates %}checked{% endif %}>
+                        <label for="notify_new_candidates">Уведомлять о новых кандидатах</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="notify_status_changes" name="notify_status_changes" {% if settings.notify_status_changes %}checked{% endif %}>
+                        <label for="notify_status_changes">Уведомлять об изменении статуса</label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit">Сохранить настройки</button>
+        </form>
+    </div>
+</body>
+</html>
