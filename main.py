@@ -440,17 +440,22 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
     return user
 
-@app.post("/users/", response_model=UserOut)
-def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.username == user_in.username).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Username already taken")
-    user = User(
-        username=user_in.username,
-        hashed_password=hash_password(user_in.password),
-        role="hr"  # можно изменить на "dean" или "admin"
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+
+@app.get("/users/{user_id}/edit", response_class=HTMLResponse)
+def edit_user_form(
+        user_id: int,
+        request: Request,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return templates.TemplateResponse("edit_user.html", {
+        "request": request,
+        "user": user
+    })
