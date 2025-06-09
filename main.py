@@ -78,10 +78,12 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-
+from datetime import datetime, timedelta
+from sqlalchemy import func
+from collections import defaultdict
 from auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM, hash_password
 from database import get_db
-from models import User, SearchHistory, Candidate
+from models import User, SearchHistory, Candidate, , UserAction, SystemSettings
 from schemas import UserOut, UserCreate
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -111,6 +113,7 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
         return templates.TemplateResponse("login.html", {"request": {}, "error": "Неверные данные"}, status_code=401)
 
     token = create_access_token({"sub": user.username})
+    log_user_action(db, user.id, "login", f"User {user.username} logged in")
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(key="access_token", value=token, httponly=True)
@@ -142,6 +145,7 @@ def register(
     db.add(user)
     db.commit()
     db.refresh(user)
+    log_user_action(db, user.id, "register", f"New user {username} registered with role {role}")
 
     response = RedirectResponse(url="/login", status_code=302)
     return response
@@ -233,25 +237,42 @@ def view_candidate(candidate_id: int, request: Request,
 
 # Обновление статуса кандидата
 @app.post("/candidates/{candidate_id}/update")
-def update_candidate_status(candidate_id: int,
-                            action: str = Form(...),
-                            db: Session = Depends(get_db),
-                            current_user: User = Depends(get_current_user)):
-    candidate = db.query(Candidate).filter(Candidate.id == candidate_id,
-                                           Candidate.user_id == current_user.id).first()
+def update_candidate_status(
+        candidate_id: int,
+        action: str = Form(...),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    candidate = db.query(Candidate).filter(
+        Candidate.id == candidate_id,
+        Candidate.user_id == current_user.id
+    ).first()
+
     if not candidate:
         raise HTTPException(status_code=404, detail="Кандидат не найден")
 
-    if action == "approve":
-        candidate.status = "approved"
-    elif action == "reject":
-        candidate.status = "rejected"
-    elif action == "screen":
-        candidate.status = "screened"
+    old_status = candidate.status
+    if current_user.role == "hr":
+        if action == "approve":
+            candidate.status = "approved"
+        elif action == "reject":
+            candidate.status = "rejected"
+        elif action == "screen":
+            candidate.status = "screened"
+    elif current_user.role == "dean" and action == "final_approve":
+        if candidate.status == "approved":
+            candidate.status = "final_approved"
+        else:
+            raise HTTPException(status_code=400, detail="Кандидат должен быть одобрен HR")
 
     db.commit()
+    log_user_action(
+        db,
+        current_user.id,
+        "update_candidate_status",
+        f"Updated candidate {candidate.name} status from {old_status} to {candidate.status}"
+    )
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
-
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, current_user: User = Depends(get_current_user)):
