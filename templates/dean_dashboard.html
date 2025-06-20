@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dean Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .dashboard-card {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .dashboard-card h2 {
+            margin-top: 0;
+        }
+        .dashboard-card a {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        .dashboard-card a:hover {
+            background: #0056b3;
+        }
+        .pending-approvals {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        .status-approved {
+            background: #28a745;
+            color: white;
+        }
+        .status-pending {
+            background: #ffc107;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="/logout">Выйти</a>
+    </div>
+
+    <h1>Dean Dashboard</h1>
+    <p>Добро пожаловать, {{ user.username }}!</p>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h2>Кандидаты на финальное одобрение</h2>
+            <p>Просмотр и финальное одобрение кандидатов</p>
+            <a href="/candidates?status=approved">Просмотреть кандидатов</a>
+        </div>
+
+        <div class="dashboard-card">
+            <h2>История поиска</h2>
+            <p>Просмотр истории поисковых запросов</p>
+            <a href="/history">Просмотреть историю</a>
+        </div>
+    </div>
+
+    <div class="pending-approvals">
+        <h2>Кандидаты, ожидающие финального одобрения</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <tr>
+                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Имя</th>
+                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Email</th>
+                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Статус</th>
+                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Действия</th>
+            </tr>
+            {% for candidate in pending_candidates %}
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ candidate.name }}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ candidate.email }}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd;">
+                    <span class="status-badge status-pending">Ожидает одобрения</span>
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd;">
+                    <a href="/candidates/{{ candidate.id }}" class="action-button">Просмотреть</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html> 

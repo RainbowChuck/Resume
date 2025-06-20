@@ -1,24 +1,191 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Кандидат: {{ candidate.name }}</title>
+    <meta charset="UTF-8">
+    <title>Детали кандидата</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .candidate-info {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .candidate-info h2 {
+            margin-top: 0;
+        }
+        .info-group {
+            margin-bottom: 15px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .resume-text, .test-results, .video-notes {
+            background: white;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+        .status-actions {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .status-button {
+            display: inline-block;
+            padding: 8px 16px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+        }
+        .status-button.approve {
+            background: #28a745;
+        }
+        .status-button.reject {
+            background: #dc3545;
+        }
+        .status-button.screen {
+            background: #ffc107;
+            color: black;
+        }
+        .status-button.final-approve {
+            background: #17a2b8;
+        }
+        .status-button:hover {
+            opacity: 0.9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+        }
+    </style>
 </head>
 <body>
-  <h2>Кандидат: {{ candidate.name }}</h2>
+    <div class="nav-links">
+        <a href="/candidates">← К списку кандидатов</a>
+        <a href="/dashboard">На главную</a>
+    </div>
 
-  <p><strong>Email:</strong> {{ candidate.email }}</p>
-  <p><strong>Телефон:</strong> {{ candidate.phone }}</p>
-  <p><strong>Статус:</strong> {{ candidate.status }}</p>
-  <p><strong>Резюме:</strong></p>
-  <pre>{{ candidate.resume_text }}</pre>
+    <div class="candidate-info">
+        <h2>{{ candidate.name }}</h2>
+        <div class="info-group">
+            <span class="info-label">Email:</span>
+            <span>{{ candidate.email }}</span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Телефон:</span>
+            <span>{{ candidate.phone }}</span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Статус:</span>
+            <span>{{ candidate.status }}</span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Дата добавления:</span>
+            <span>{{ candidate.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+        </div>
+    </div>
 
-  <form method="post" action="/candidates/{{ candidate.id }}/update">
-    <button type="submit" name="action" value="approve">✅ Одобрить</button>
-    <button type="submit" name="action" value="reject">❌ Отклонить</button>
-  </form>
+    <div class="status-actions">
+        {% if current_user.role == "hr" %}
+        <form method="POST" action="/candidates/{{ candidate.id }}/update" style="display: inline;">
+            <input type="hidden" name="action" value="screen">
+            <button type="submit" class="status-button screen">На скрининг</button>
+        </form>
+        <form method="POST" action="/candidates/{{ candidate.id }}/update" style="display: inline;">
+            <input type="hidden" name="action" value="approve">
+            <button type="submit" class="status-button approve">Одобрить</button>
+        </form>
+        <form method="POST" action="/candidates/{{ candidate.id }}/update" style="display: inline;">
+            <input type="hidden" name="action" value="reject">
+            <button type="submit" class="status-button reject">Отклонить</button>
+        </form>
+        {% elif current_user.role == "dean" and candidate.status == "approved" %}
+        <form method="POST" action="/candidates/{{ candidate.id }}/update" style="display: inline;">
+            <input type="hidden" name="action" value="final_approve">
+            <button type="submit" class="status-button final-approve">Финальное одобрение</button>
+        </form>
+        {% endif %}
+    </div>
 
-  <br>
-  <a href="/candidates">← Назад</a>
+    <div class="resume-text">
+        <h3>Текст резюме:</h3>
+        {{ candidate.resume_text }}
+    </div>
+
+    {% if current_user.role == "hr" %}
+    <div class="test-results">
+        <h3>Результаты тестирования:</h3>
+        <form method="POST" action="/candidates/{{ candidate.id }}/update_test_results">
+            <div class="form-group">
+                <label for="test_results">Введите результаты тестирования:</label>
+                <textarea name="test_results" id="test_results">{{ candidate.test_results or '' }}</textarea>
+            </div>
+            <button type="submit" class="status-button">Сохранить результаты</button>
+        </form>
+    </div>
+
+    <div class="video-notes">
+        <h3>Заметки по видео-интервью:</h3>
+        <form method="POST" action="/candidates/{{ candidate.id }}/update_video_notes">
+            <div class="form-group">
+                <label for="video_interview_notes">Введите заметки по видео-интервью:</label>
+                <textarea name="video_interview_notes" id="video_interview_notes">{{ candidate.video_interview_notes or '' }}</textarea>
+            </div>
+            <button type="submit" class="status-button">Сохранить заметки</button>
+        </form>
+    </div>
+    {% else %}
+    {% if candidate.test_results %}
+    <div class="test-results">
+        <h3>Результаты тестирования:</h3>
+        {{ candidate.test_results }}
+    </div>
+    {% endif %}
+
+    {% if candidate.video_interview_notes %}
+    <div class="video-notes">
+        <h3>Заметки по видео-интервью:</h3>
+        {{ candidate.video_interview_notes }}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if candidate.notes %}
+    <div class="resume-text">
+        <h3>Заметки:</h3>
+        {{ candidate.notes }}
+    </div>
+    {% endif %}
 </body>
 </html>
