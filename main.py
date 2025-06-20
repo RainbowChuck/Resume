@@ -146,9 +146,7 @@ def register(
     db.add(user)
     db.commit()
     db.refresh(user)
-    
     log_user_action(db, user.id, "register", f"New user {username} registered with role {role}")
-
     response = RedirectResponse(url="/login", status_code=302)
     return response
 
@@ -249,10 +247,8 @@ def update_candidate_status(
         Candidate.id == candidate_id,
         Candidate.user_id == current_user.id
     ).first()
-    
     if not candidate:
         raise HTTPException(status_code=404, detail="Кандидат не найден")
-
     old_status = candidate.status
     if current_user.role == "hr":
         if action == "approve":
@@ -266,7 +262,6 @@ def update_candidate_status(
             candidate.status = "final_approved"
         else:
             raise HTTPException(status_code=400, detail="Кандидат должен быть одобрен HR")
-
     db.commit()
     log_user_action(
         db,
@@ -275,6 +270,7 @@ def update_candidate_status(
         f"Updated candidate {candidate.name} status from {old_status} to {candidate.status}"
     )
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
+
 
 @app.post("/candidates/{candidate_id}/update_test_results")
 def update_test_results(
@@ -285,15 +281,12 @@ def update_test_results(
 ):
     if current_user.role != "hr":
         raise HTTPException(status_code=403, detail="Только HR может обновлять результаты тестов")
-
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
         Candidate.user_id == current_user.id
     ).first()
-    
     if not candidate:
         raise HTTPException(status_code=404, detail="Кандидат не найден")
-
     candidate.test_results = test_results
     db.commit()
     log_user_action(
@@ -304,6 +297,7 @@ def update_test_results(
     )
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
 
+
 @app.post("/candidates/{candidate_id}/update_video_notes")
 def update_video_notes(
     candidate_id: int,
@@ -313,15 +307,12 @@ def update_video_notes(
 ):
     if current_user.role != "hr":
         raise HTTPException(status_code=403, detail="Только HR может обновлять заметки по видео-интервью")
-
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
         Candidate.user_id == current_user.id
     ).first()
-    
     if not candidate:
         raise HTTPException(status_code=404, detail="Кандидат не найден")
-
     candidate.video_interview_notes = video_interview_notes
     db.commit()
     log_user_action(
@@ -341,17 +332,18 @@ def search_page(
         raise HTTPException(status_code=403, detail="Access denied")
     return templates.TemplateResponse("search.html", {"request": request})
 
+
 @app.post("/search", response_class=HTMLResponse)
 def perform_search(
-    request: Request,
-    query: str = Form(...),
-    city: str = Form(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+        request: Request,
+        query: str = Form(...),
+        city: str = Form(None),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
     if current_user.role not in ["hr", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied")
-    
+
     # Save search to history
     history_entry = SearchHistory(
         query=query,
@@ -359,15 +351,15 @@ def perform_search(
         user_id=current_user.id
     )
     db.add(history_entry)
-    
+
     # Perform search using search_app functionality
     from search_app import search_resumes
     results = search_resumes(query, city)
-    
+
     # Save number of results
     history_entry.results = len(results)
     db.commit()
-    
+
     return templates.TemplateResponse("search.html", {
         "request": request,
         "results": results,
@@ -375,11 +367,12 @@ def perform_search(
         "city": city
     })
 
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+        request: Request,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
     if current_user.role == "admin":
         # Get statistics for admin dashboard
@@ -387,13 +380,13 @@ def dashboard(
         total_candidates = db.query(Candidate).count()
         total_searches = db.query(SearchHistory).count()
         approved_candidates = db.query(Candidate).filter(Candidate.status == "approved").count()
-        
+
         # Get all users for management
         users = db.query(User).all()
-        
+
         # Get recent actions
         recent_actions = db.query(UserAction).order_by(UserAction.created_at.desc()).limit(10).all()
-        
+
         return templates.TemplateResponse("admin_dashboard.html", {
             "request": request,
             "user": current_user,
@@ -446,11 +439,9 @@ def edit_user_form(
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Access denied")
-    
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
     return templates.TemplateResponse("edit_user.html", {
         "request": request,
         "user": user
@@ -467,12 +458,9 @@ def edit_user(
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Access denied")
-    
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # Check if username is taken by another user
     existing = db.query(User).filter(User.username == username, User.id != user_id).first()
     if existing:
         return templates.TemplateResponse("edit_user.html", {
@@ -480,12 +468,10 @@ def edit_user(
             "user": user,
             "error": "Username already taken"
         }, status_code=400)
-    
     user.username = username
     user.role = role
     if password:
         user.hashed_password = hash_password(password)
-    
     db.commit()
     return RedirectResponse(url="/dashboard", status_code=302)
 
@@ -497,14 +483,11 @@ def delete_user(
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Access denied")
-    
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
-    
     db.delete(user)
     db.commit()
     return RedirectResponse(url="/dashboard", status_code=302)
@@ -596,18 +579,9 @@ def settings_page(
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Access denied")
-    
-    # Get or create settings
-    settings = db.query(SystemSettings).first()
-    if not settings:
-        settings = SystemSettings()
-        db.add(settings)
-        db.commit()
-        db.refresh(settings)
-    
     return templates.TemplateResponse("settings.html", {
         "request": request,
-        "settings": settings
+        "settings": db.query(SystemSettings).first()
     })
 
 @app.post("/settings")
@@ -629,14 +603,12 @@ def update_settings(
     if not settings:
         settings = SystemSettings()
         db.add(settings)
-    
     settings.system_name = system_name
     settings.items_per_page = items_per_page
     settings.search_engine = search_engine
     settings.enable_semantic_search = enable_semantic_search
     settings.notify_new_candidates = notify_new_candidates
     settings.notify_status_changes = notify_status_changes
-    
     db.commit()
     db.refresh(settings)
     
@@ -646,7 +618,6 @@ def update_settings(
         "update_settings",
         "System settings updated"
     )
-    
     return templates.TemplateResponse("settings.html", {
         "request": request,
         "settings": settings,

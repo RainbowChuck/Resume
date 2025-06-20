@@ -86,22 +86,18 @@
     <div class="nav-links">
         <a href="/dashboard">← Назад к панели управления</a>
     </div>
-
     <div class="edit-container">
         <h1>Редактирование пользователя</h1>
-        
         {% if error %}
         <div class="error">
             {{ error }}
         </div>
         {% endif %}
-
         <form method="POST" action="/users/{{ user.id }}/edit">
             <div class="form-group">
                 <label for="username">Имя пользователя:</label>
                 <input type="text" id="username" name="username" value="{{ user.username }}" required>
             </div>
-
             <div class="form-group">
                 <label for="role">Роль:</label>
                 <select id="role" name="role" required>
@@ -110,21 +106,18 @@
                     <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label for="password">Новый пароль (оставьте пустым, чтобы не менять):</label>
                 <input type="password" id="password" name="password">
             </div>
-
             <div class="button-group">
                 <button type="submit" class="save-button">Сохранить изменения</button>
                 <a href="/dashboard" class="cancel-button" style="text-decoration: none; text-align: center;">Отмена</a>
             </div>
         </form>
-
         <form method="POST" action="/users/{{ user.id }}/delete" style="margin-top: 20px;">
             <button type="submit" class="delete-button" onclick="return confirm('Вы уверены, что хотите удалить этого пользователя?')">Удалить пользователя</button>
         </form>
     </div>
 </body>
-</html> 
+</html>

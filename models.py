@@ -40,7 +40,6 @@ class Candidate(Base):
     video_interview_notes = Column(Text)  # New field for video interview notes
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="candidates")
 
@@ -66,4 +65,3 @@ class SystemSettings(Base):
     notify_new_candidates = Column(Boolean, default=True)
     notify_status_changes = Column(Boolean, default=True)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-

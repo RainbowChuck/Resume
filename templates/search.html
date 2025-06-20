@@ -58,25 +58,20 @@
         <a href="/dashboard">← Назад</a>
         <a href="/history">История поиска</a>
     </div>
-
     <h1>Поиск резюме</h1>
-    
     <div class="search-form">
         <form method="POST" action="/search">
             <div class="form-group">
                 <label for="query">Поисковый запрос:</label>
                 <textarea name="query" id="query" rows="3" required></textarea>
             </div>
-            
             <div class="form-group">
                 <label for="city">Город:</label>
                 <input type="text" name="city" id="city">
             </div>
-            
             <button type="submit">Найти</button>
         </form>
     </div>
-
     {% if results %}
     <div class="results">
         <h2>Результаты поиска</h2>
@@ -101,4 +96,4 @@
     </div>
     {% endif %}
 </body>
-</html> 
+</html>
