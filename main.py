@@ -40,6 +40,18 @@ with open(MAP_PATH, "rb") as f:
 # Store last search results per user (for demo; in production use a better approach)
 user_last_search_results = {}
 
+def is_user_active(user: models.User) -> bool:
+    """Check if user is currently active (active within last 15 minutes)"""
+    if not user.last_activity:
+        return False
+    time_diff = datetime.utcnow() - user.last_activity
+    return time_diff.total_seconds() < 15 * 60  # 15 minutes
+
+def update_user_activity(db: Session, user: models.User):
+    """Update user's last activity timestamp"""
+    user.last_activity = datetime.utcnow()
+    db.commit()
+
 @app.get("/", response_class=HTMLResponse)
 def home():
     return RedirectResponse("/login")
@@ -48,7 +60,21 @@ def login_form(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.get("/logout")
-def logout():
+def logout(access_token: str = Cookie(None), db: Session = Depends(get_db)):
+    if access_token:
+        try:
+            payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+            username: str = payload.get("sub")
+            if username:
+                user = db.query(models.User).filter(models.User.username == username).first()
+                if user:
+                    # Mark user as inactive by setting last_activity to 20 minutes ago
+                    user.last_activity = datetime.utcnow() - timedelta(minutes=20)
+                    db.commit()
+                    log_user_action(db, user.id, "logout", f"User {user.username} logged out")
+        except JWTError:
+            pass  # Invalid token, just continue with logout
+    
     response = RedirectResponse(url="/login", status_code=302)
     response.delete_cookie("access_token")
     return response
@@ -59,9 +85,11 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
     if not user or not verify_password(password, user.hashed_password):
         return templates.TemplateResponse("login.html", {"request": {}, "error": "Неверные данные"}, status_code=401)
 
-    token = create_access_token({"sub": user.username})
+    # Update last activity timestamp
+    update_user_activity(db, user)
     log_user_action(db, user.id, "login", f"User {user.username} logged in")
 
+    token = create_access_token({"sub": user.username})
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response
@@ -111,6 +139,7 @@ def get_current_user(access_token: str = Cookie(None), db: Session = Depends(get
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    
     return user
 
 @app.get("/history", response_class=HTMLResponse)
@@ -122,6 +151,9 @@ def get_history(
     start: str = "",
     end: str = ""
 ):
+    # Update user activity when they view history
+    update_user_activity(db, current_user)
+    
     if current_user.role == "dean":
         query = db.query(models.SearchHistory).options(joinedload(models.SearchHistory.user))
     else:
@@ -144,6 +176,9 @@ def list_candidates(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    # Update user activity when they view candidates
+    update_user_activity(db, current_user)
+    
     candidates = db.query(models.Candidate).filter(models.Candidate.user_id == current_user.id).all()
     return templates.TemplateResponse("candidates.html", {
         "request": request,
@@ -154,8 +189,13 @@ def list_candidates(
 def view_candidate(candidate_id: int, request: Request,
                    db: Session = Depends(get_db),
                    current_user: models.User = Depends(get_current_user)):
-    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id,
-                                           models.Candidate.user_id == current_user.id).first()
+    # Update user activity when they view candidates
+    update_user_activity(db, current_user)
+    
+    candidate = db.query(models.Candidate).filter(
+        models.Candidate.id == candidate_id,
+        models.Candidate.user_id == current_user.id
+    ).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Кандидат не найден")
     return templates.TemplateResponse("candidate_detail.html", {
@@ -171,6 +211,9 @@ def update_candidate_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    # Update user activity when they modify candidates
+    update_user_activity(db, current_user)
+    
     candidate = db.query(models.Candidate).filter(
         models.Candidate.id == candidate_id,
         models.Candidate.user_id == current_user.id
@@ -198,47 +241,71 @@ def update_candidate_status(
 @app.post("/candidates/{candidate_id}/update_test_results")
 def update_test_results(
     candidate_id: int,
-    test_results: str = Form(...),
+    test_results: str = Form(None),  # Make it optional
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "hr":
         raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
     candidate = db.query(models.Candidate).filter(
         models.Candidate.id == candidate_id,
         models.Candidate.user_id == current_user.id
     ).first()
+    
     if not candidate:
         raise HTTPException(status_code=404, detail="Кандидат не найден")
-    candidate.test_results = test_results
-    db.commit()
-    log_user_action(
-        db, current_user.id, "update_test_results",
-        f"Test results for candidate {candidate_id} updated."
-    )
+    
+    # Only update if new results are provided and not empty
+    if test_results and test_results.strip():
+        # If there are existing results, append the new ones
+        if candidate.test_results:
+            candidate.test_results = candidate.test_results + "\n\n" + test_results
+        else:
+            candidate.test_results = test_results
+        
+        db.commit()
+        
+        log_user_action(
+            db, current_user.id, "update_test_results",
+            f"Test results for candidate {candidate_id} updated."
+        )
+    
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
 
 @app.post("/candidates/{candidate_id}/update_video_notes")
 def update_video_notes(
     candidate_id: int,
-    video_interview_notes: str = Form(...),
+    video_interview_notes: str = Form(None),  # Make it optional
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "hr":
         raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
     candidate = db.query(models.Candidate).filter(
         models.Candidate.id == candidate_id,
         models.Candidate.user_id == current_user.id
     ).first()
+    
     if not candidate:
         raise HTTPException(status_code=404, detail="Кандидат не найден")
-    candidate.video_interview_notes = video_interview_notes
-    db.commit()
-    log_user_action(
-        db, current_user.id, "update_video_notes",
-        f"Video interview notes for candidate {candidate_id} updated."
-    )
+    
+    # Only update if new notes are provided and not empty
+    if video_interview_notes and video_interview_notes.strip():
+        # If there are existing notes, append the new ones
+        if candidate.video_interview_notes:
+            candidate.video_interview_notes = candidate.video_interview_notes + "\n\n" + video_interview_notes
+        else:
+            candidate.video_interview_notes = video_interview_notes
+        
+        db.commit()
+        
+        log_user_action(
+            db, current_user.id, "update_video_notes",
+            f"Video interview notes for candidate {candidate_id} updated."
+        )
+    
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
 
 @app.get("/search", response_class=HTMLResponse)
@@ -246,6 +313,10 @@ def search_page(
     request: Request,
     current_user: models.User = Depends(get_current_user)
 ):
+    # Update user activity when they access search page
+    db = next(get_db())
+    update_user_activity(db, current_user)
+    
     return templates.TemplateResponse("search.html", {"request": request})
 
 @app.post("/search", response_class=HTMLResponse)
@@ -256,6 +327,9 @@ def perform_search(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
+    # Update user activity when they perform searches
+    update_user_activity(db, current_user)
+    
     results = search_resumes(query, model, resumes_data, embeddings)
     # Save number of results
     search_entry = models.SearchHistory(
@@ -314,6 +388,9 @@ def dashboard(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
+    # Update user activity when they access dashboard
+    update_user_activity(db, current_user)
+    
     # Данные для воронок
     status_counts = db.query(
         models.Candidate.status, func.count(models.Candidate.id)
@@ -343,7 +420,12 @@ def dashboard(
         total_searches = db.query(models.SearchHistory).count()
         approved_candidates = db.query(models.Candidate).filter(models.Candidate.status == "approved").count()
         users = db.query(models.User).all()
-        recent_actions = db.query(models.UserAction).order_by(models.UserAction.created_at.desc()).limit(10).all()
+        
+        # Add active status to each user
+        for user in users:
+            user.is_active = is_user_active(user)
+            
+        recent_actions = db.query(models.UserAction).options(joinedload(models.UserAction.user)).order_by(models.UserAction.created_at.desc()).limit(10).all()
         return templates.TemplateResponse("admin_dashboard.html", {
             "request": request,
             "funnel_data": funnel_data,
@@ -390,6 +472,9 @@ def dean_candidates(
 ):
     if current_user.role != 'dean':
         raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
+    # Update user activity when they view candidates
+    update_user_activity(db, current_user)
     
     candidates = db.query(models.Candidate).filter(models.Candidate.status == 'approved').all()
     
@@ -518,6 +603,9 @@ def statistics(
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Недостаточно прав")
 
+    # Update user activity when they view statistics
+    update_user_activity(db, current_user)
+
     actions_query = db.query(models.UserAction)
     if start_date:
         actions_query = actions_query.filter(models.UserAction.created_at >= start_date)
@@ -576,7 +664,7 @@ def statistics(
     total_searches = db.query(models.SearchHistory).count()
     approved_candidates = db.query(models.Candidate).filter(models.Candidate.status == "approved").count()
     users = db.query(models.User).all()
-    recent_actions = db.query(models.UserAction).order_by(models.UserAction.created_at.desc()).limit(10).all()
+    recent_actions = db.query(models.UserAction).options(joinedload(models.UserAction.user)).order_by(models.UserAction.created_at.desc()).limit(10).all()
 
     return templates.TemplateResponse("statistics.html", {
         "request": request,
@@ -603,6 +691,10 @@ def settings_page(
 ):
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
+    # Update user activity when they view settings
+    update_user_activity(db, current_user)
+    
     settings = db.query(models.SystemSettings).first()
     if not settings:
         settings = models.SystemSettings()
@@ -644,12 +736,21 @@ def manage_users(
 ):
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
+    # Update user activity when they manage users
+    update_user_activity(db, current_user)
+    
     users = db.query(models.User).all()
+    
+    # Add active status to each user
+    for user in users:
+        user.is_active = is_user_active(user)
+    
     total_users = db.query(models.User).count()
     total_candidates = db.query(models.Candidate).count()
     total_searches = db.query(models.SearchHistory).count()
     approved_candidates = db.query(models.Candidate).filter(models.Candidate.status == "approved").count()
-    recent_actions = db.query(models.UserAction).order_by(models.UserAction.created_at.desc()).limit(10).all()
+    recent_actions = db.query(models.UserAction).options(joinedload(models.UserAction.user)).order_by(models.UserAction.created_at.desc()).limit(10).all()
     deleted = request.query_params.get("deleted")
     return templates.TemplateResponse("admin_dashboard.html", {
         "request": request,
@@ -702,3 +803,35 @@ def history_result(history_id: int, request: Request, db: Session = Depends(get_
     # Re-run the search with the stored query and city
     results = search_resumes(history.query, model, resumes_data, embeddings)
     return templates.TemplateResponse("search.html", {"request": request, "results": results, "history_query": history.query, "history_city": history.city})
+
+@app.post("/candidates/{candidate_id}/update_details")
+def update_candidate_details(
+    candidate_id: int,
+    name: str = Form(...),
+    email: str = Form(None),
+    phone: str = Form(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Update user activity when they modify candidates
+    update_user_activity(db, current_user)
+    
+    candidate = db.query(models.Candidate).filter(
+        models.Candidate.id == candidate_id,
+        models.Candidate.user_id == current_user.id
+    ).first()
+    
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Кандидат не найден")
+    
+    candidate.name = name
+    candidate.email = email or ""
+    candidate.phone = phone or ""
+    
+    db.commit()
+    
+    log_user_action(
+        db, current_user.id, "update_candidate_details",
+        f"Details for candidate {candidate_id} updated."
+    )
+    return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)

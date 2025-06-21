@@ -149,7 +149,11 @@
                     <td>{{ user.username }}</td>
                     <td>{{ user.role }}</td>
                     <td>
-                        <span class="status-badge status-active">Активен</span>
+                        {% if user.is_active %}
+                            <span class="status-badge status-active">Активен</span>
+                        {% else %}
+                            <span class="status-badge status-inactive">Неактивен</span>
+                        {% endif %}
                     </td>
                     <td>
                         <a href="/users/{{ user.id }}/edit" class="action-button edit-button">Редактировать</a>
@@ -172,9 +176,9 @@
             </tr>
             {% for action in recent_actions %}
             <tr>
-                <td>{{ action.user }}</td>
+                <td>{{ action.user.username if action.user else 'Неизвестно' }}</td>
                 <td>{{ action.description }}</td>
-                <td>{{ action.date }}</td>
+                <td>{{ action.created_at.strftime('%Y-%m-%d %H:%M:%S') if action.created_at else 'Неизвестно' }}</td>
             </tr>
             {% endfor %}
         </table>

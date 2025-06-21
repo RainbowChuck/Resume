@@ -10,6 +10,7 @@ class User(Base):
     hashed_password = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     role = Column(String, default="hr")  # hr, admin, dean
+    last_activity = Column(DateTime, default=datetime.utcnow)
 
     history = relationship("SearchHistory", back_populates="user")
     candidates = relationship("Candidate", back_populates="user")

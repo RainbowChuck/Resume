@@ -68,8 +68,8 @@
     {% for candidate in candidates %}
     <tr>
       <td>{{ candidate.name }}</td>
-      <td>{{ candidate.email }}</td>
-      <td>{{ candidate.phone }}</td>
+      <td>{{ candidate.email or 'Не указан' }}</td>
+      <td>{{ candidate.phone or 'Не указан' }}</td>
       <td>{{ candidate.status }}</td>
       <td>
         <a href="/candidates/{{ candidate.id }}" class="action-button">Подробнее</a>

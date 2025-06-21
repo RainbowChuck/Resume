@@ -88,6 +88,23 @@
             border-radius: 4px;
             min-height: 100px;
         }
+        .existing-notes {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .existing-notes h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .notes-content {
+            margin-top: 5px;
+            white-space: pre-wrap;
+            color: #212529;
+        }
     </style>
 </head>
 <body>
@@ -100,11 +117,11 @@
         <h2>{{ candidate.name }}</h2>
         <div class="info-group">
             <span class="info-label">Email:</span>
-            <span>{{ candidate.email }}</span>
+            <span>{{ candidate.email or 'Не указан' }}</span>
         </div>
         <div class="info-group">
             <span class="info-label">Телефон:</span>
-            <span>{{ candidate.phone }}</span>
+            <span>{{ candidate.phone or 'Не указан' }}</span>
         </div>
         <div class="info-group">
             <span class="info-label">Статус:</span>
@@ -114,6 +131,27 @@
             <span class="info-label">Дата добавления:</span>
             <span>{{ candidate.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
         </div>
+        
+        {% if current_user.role == "hr" %}
+        <div class="edit-details" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <h3>Редактировать информацию</h3>
+            <form method="POST" action="/candidates/{{ candidate.id }}/update_details">
+                <div class="form-group">
+                    <label for="name">Имя/Должность:</label>
+                    <input type="text" name="name" id="name" value="{{ candidate.name }}" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" name="email" id="email" value="{{ candidate.email or '' }}" placeholder="Введите email" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Телефон:</label>
+                    <input type="tel" name="phone" id="phone" value="{{ candidate.phone or '' }}" placeholder="Введите телефон" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <button type="submit" class="status-button">Сохранить изменения</button>
+            </form>
+        </div>
+        {% endif %}
     </div>
 
     <div class="status-actions">
@@ -146,23 +184,35 @@
     {% if current_user.role == "hr" %}
     <div class="test-results">
         <h3>Результаты тестирования:</h3>
+        {% if candidate.test_results %}
+        <div class="existing-notes">
+            <h4>Существующие результаты:</h4>
+            <div class="notes-content">{{ candidate.test_results }}</div>
+        </div>
+        {% endif %}
         <form method="POST" action="/candidates/{{ candidate.id }}/update_test_results">
             <div class="form-group">
-                <label for="test_results">Введите результаты тестирования:</label>
-                <textarea name="test_results" id="test_results">{{ candidate.test_results or '' }}</textarea>
+                <label for="test_results">Добавить новые результаты тестирования:</label>
+                <textarea name="test_results" id="test_results" placeholder="Введите новые результаты тестирования..."></textarea>
             </div>
-            <button type="submit" class="status-button">Сохранить результаты</button>
+            <button type="submit" class="status-button">Добавить результаты</button>
         </form>
     </div>
 
     <div class="video-notes">
         <h3>Заметки по видео-интервью:</h3>
+        {% if candidate.video_interview_notes %}
+        <div class="existing-notes">
+            <h4>Существующие заметки:</h4>
+            <div class="notes-content">{{ candidate.video_interview_notes }}</div>
+        </div>
+        {% endif %}
         <form method="POST" action="/candidates/{{ candidate.id }}/update_video_notes">
             <div class="form-group">
-                <label for="video_interview_notes">Введите заметки по видео-интервью:</label>
-                <textarea name="video_interview_notes" id="video_interview_notes">{{ candidate.video_interview_notes or '' }}</textarea>
+                <label for="video_interview_notes">Добавить новые заметки по видео-интервью:</label>
+                <textarea name="video_interview_notes" id="video_interview_notes" placeholder="Введите новые заметки по видео-интервью..."></textarea>
             </div>
-            <button type="submit" class="status-button">Сохранить заметки</button>
+            <button type="submit" class="status-button">Добавить заметки</button>
         </form>
     </div>
     {% else %}
