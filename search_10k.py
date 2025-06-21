@@ -8,12 +8,14 @@ EMBEDDINGS_PATH = os.path.join("models", "resume_embeddings_10k.pkl")
 MAP_PATH = os.path.join("models", "resume_id_map_10k.pkl")
 MODEL_NAME = "cointegrated/rubert-tiny2"
 
-def search_resumes(query_text, model, resumes, embeddings, top_k=10):
+def search_resumes(query_text, model, resumes, embeddings, top_k=10, city=None, education=None):
     query = {
         "positionName": query_text,
         "experience": 3,
         "hardSkills": query_text.lower().split(),
-        "salary": 100000
+        "salary": 100000,
+        "city": city,
+        "education": education
     }
 
     text = query["positionName"] + " " + " ".join(query["hardSkills"])
@@ -23,22 +25,42 @@ def search_resumes(query_text, model, resumes, embeddings, top_k=10):
     nn.fit(embeddings)
     _, indices = nn.kneighbors([query_vec], n_neighbors=50)
 
-    ranked = []
-    keywords = set(query["hardSkills"])
-    strong_keywords = {"история", "учитель", "обществознание"}
-
-    for idx in indices[0]:
-        resume = resumes[idx]
-        score = 0
+    def improved_score(query, resume):
         pos_tokens = set(resume.get("positionName", "").lower().split())
+        skills = set(resume.get("hardSkills", []))
+        keywords = set(query["hardSkills"])
+        strong_keywords = {"история", "учитель", "обществознание"}
+
         pos_match = len(keywords & pos_tokens)
         strong_match = len(strong_keywords & pos_tokens)
-        skills = set(resume.get("hardSkills", []))
         skill_match = len(keywords & skills)
         experience_score = max(0, 10 - abs(query["experience"] - resume.get("experience", 0)))
         salary_score = max(0, 10 - abs(query["salary"] - resume.get("salary", 0)) // 10000)
+        phrase_bonus = 10 if query["positionName"].lower() in resume.get("positionName", "").lower() else 0
+        city_bonus = 0
+        if query.get("city"):
+            if query["city"].lower() in resume.get("localityName", "").lower():
+                city_bonus = 5
+        education_bonus = 0
+        if query.get("education"):
+            if query["education"].lower() in resume.get("education", "").lower():
+                education_bonus = 3
+        score = (
+            pos_match * 5 +
+            skill_match * 3 +
+            strong_match * 7 +
+            experience_score +
+            salary_score +
+            phrase_bonus +
+            city_bonus +
+            education_bonus
+        )
+        return score
 
-        score = pos_match * 5 + skill_match * 3 + strong_match * 7 + experience_score + salary_score
+    ranked = []
+    for idx in indices[0]:
+        resume = resumes[idx]
+        score = improved_score(query, resume)
         ranked.append((score, resume))
 
     ranked.sort(key=lambda x: x[0], reverse=True)

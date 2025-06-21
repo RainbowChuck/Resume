@@ -4,11 +4,74 @@
 <head>
   <meta charset="UTF-8">
   <title>История запросов</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .nav-links {
+      margin-bottom: 20px;
+    }
+    .nav-links a {
+      margin-right: 15px;
+      text-decoration: none;
+      color: #007bff;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .filter-form {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .filter-form label {
+      margin-right: 5px;
+    }
+    .download-form {
+      margin-bottom: 20px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    th {
+      background-color: #f5f5f5;
+    }
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+  </style>
 </head>
 <body>
-  <h1>История запросов</h1>
+  <div class="nav-links">
+    <a href="/dashboard">← Назад</a>
+    <a href="/search">Поиск</a>
+    <a href="/candidates">Кандидаты</a>
+  </div>
+  <h1>История поисковых запросов</h1>
 
-  <form method="get" action="/history">
+  <form class="filter-form" method="get" action="/history">
     <label>Город:</label>
     <select name="city">
       <option value="">Все</option>
@@ -16,33 +79,38 @@
       <option value="Санкт-Петербург">Санкт-Петербург</option>
       <option value="Новосибирск">Новосибирск</option>
     </select>
-
     <label>Период:</label>
     <input type="date" name="start"> —
     <input type="date" name="end">
-
     <button type="submit">Фильтр</button>
   </form>
 
-  <br>
-  <table border="1" cellpadding="5">
+  <form class="download-form" method="get" action="/history/download">
+    <button type="submit">Скачать историю в Excel</button>
+  </form>
+
+  <table>
     <tr>
       <th>Запрос</th>
       <th>Дата</th>
       <th>Город</th>
       <th>Результатов</th>
+      {% if current_user.role == 'dean' %}
+      <th>Пользователь</th>
+      {% endif %}
     </tr>
     {% for row in history %}
     <tr>
-  <td>{{ row.query }}</td>
-  <td>{{ row.date.strftime("%Y-%m-%d") }}</td>
-  <td>{{ row.city }}</td>
-  <td>{{ row.results }}</td>
-</tr>
-
+      <td><a href="/history/result/{{ row.id }}">{{ row.query }}</a></td>
+      <td>{{ row.date.strftime("%Y-%m-%d") }}</td>
+      <td>{{ row.city }}</td>
+      <td>{{ row.results }}</td>
+      {% if current_user.role == 'dean' %}
+      <td>{{ row.user.username }}</td>
+      {% endif %}
+    </tr>
     {% endfor %}
   </table>
-
-  <br><a href="/dashboard">← Назад</a>
 </body>
 </html>
+

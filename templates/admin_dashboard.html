@@ -110,6 +110,9 @@
     </div>
     <h1>Admin Dashboard</h1>
     <p>Добро пожаловать, {{ user.username }}!</p>
+    {% if deleted %}
+      <div class="alert alert-success">Пользователь удалён</div>
+    {% endif %}
     <div class="dashboard-grid">
         <div class="dashboard-card">
             <h2>Статистика системы</h2>
@@ -150,7 +153,9 @@
                     </td>
                     <td>
                         <a href="/users/{{ user.id }}/edit" class="action-button edit-button">Редактировать</a>
-                        <a href="/users/{{ user.id }}/delete" class="action-button delete-button" onclick="return confirm('Вы уверены?')">Удалить</a>
+                        <form action="/users/{{ user.id }}/delete" method="post" style="display:inline;">
+                            <button type="submit" class="action-button delete-button" onclick="return confirm('Вы уверены?')">Удалить</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

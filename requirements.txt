@@ -1,0 +1,15 @@
+fastapi==0.115.13
+sqlalchemy
+python-jose==3.5.0
+passlib==1.7.4
+sentence-transformers==4.1.0
+scikit-learn==1.7.0
+pandas==2.3.0
+uvicorn==0.34.3
+bcrypt==4.3.0
+pydantic
+ijson
+tqdm
+torch
+numpy
+pymorphy2 

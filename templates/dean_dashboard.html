@@ -72,42 +72,19 @@
     <div class="nav-links">
         <a href="/logout">Выйти</a>
     </div>
-    <h1>Dean Dashboard</h1>
+    <h1>Панель управления декана</h1>
     <p>Добро пожаловать, {{ user.username }}!</p>
     <div class="dashboard-grid">
         <div class="dashboard-card">
-            <h2>Кандидаты на финальное одобрение</h2>
-            <p>Просмотр и финальное одобрение кандидатов</p>
-            <a href="/candidates?status=approved">Просмотреть кандидатов</a>
+            <h2>Список кандидатов</h2>
+            <p>Просмотр и финальное утверждение кандидатов</p>
+            <a href="/dean/candidates">Просмотреть кандидатов</a>
         </div>
         <div class="dashboard-card">
-            <h2>История поиска</h2>
+            <h2>История поисковых запросов</h2>
             <p>Просмотр истории поисковых запросов</p>
             <a href="/history">Просмотреть историю</a>
         </div>
-    </div>
-    <div class="pending-approvals">
-        <h2>Кандидаты, ожидающие финального одобрения</h2>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-            <tr>
-                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Имя</th>
-                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Email</th>
-                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Статус</th>
-                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #ddd;">Действия</th>
-            </tr>
-            {% for candidate in pending_candidates %}
-            <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ candidate.name }}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ candidate.email }}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #ddd;">
-                    <span class="status-badge status-pending">Ожидает одобрения</span>
-                </td>
-                <td style="padding: 12px; border-bottom: 1px solid #ddd;">
-                    <a href="/candidates/{{ candidate.id }}" class="action-button">Просмотреть</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
     </div>
 </body>
 </html>

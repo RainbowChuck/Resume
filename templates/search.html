@@ -77,19 +77,30 @@
         <h2>Результаты поиска</h2>
         <table border="1" cellpadding="5" style="width: 100%; border-collapse: collapse;">
             <tr>
-                <th>Имя</th>
-                <th>Email</th>
-                <th>Телефон</th>
-                <th>Действия</th>
+                <th></th>
+                <th>Должность</th>
+                <th>Опыт</th>
+                <th>Город</th>
+                <th>Зарплата</th>
+                <th>Навыки</th>
             </tr>
             {% for result in results %}
             <tr>
-                <td>{{ result.name }}</td>
-                <td>{{ result.email }}</td>
-                <td>{{ result.phone }}</td>
                 <td>
-                    <a href="/candidates/{{ result.id }}">Подробнее</a>
+                    <form method="post" action="/candidates/add" style="margin:0;">
+                        <input type="hidden" name="positionName" value="{{ result.positionName }}">
+                        <input type="hidden" name="experience" value="{{ result.experience }}">
+                        <input type="hidden" name="localityName" value="{{ result.localityName }}">
+                        <input type="hidden" name="salary" value="{{ result.salary }}">
+                        <input type="hidden" name="hardSkills" value="{{ result.hardSkills | join(',') if result.hardSkills else '' }}">
+                        <button type="submit">Добавить</button>
+                    </form>
                 </td>
+                <td>{{ result.positionName or '-' }}</td>
+                <td>{{ result.experience or '-' }}</td>
+                <td>{{ result.localityName or '-' }}</td>
+                <td>{{ result.salary or '-' }}</td>
+                <td>{{ result.hardSkills | join(', ') if result.hardSkills else '-' }}</td>
             </tr>
             {% endfor %}
         </table>

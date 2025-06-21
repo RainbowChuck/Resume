@@ -1,14 +1,14 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
-import datetime
+from datetime import datetime
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True)
     hashed_password = Column(String)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
     role = Column(String, default="hr")  # hr, admin, dean
 
     history = relationship("SearchHistory", back_populates="user")
@@ -21,7 +21,7 @@ class SearchHistory(Base):
     query = Column(String)
     city = Column(String)
     results = Column(Integer)
-    date = Column(DateTime, default=datetime.datetime.utcnow)
+    date = Column(DateTime, default=datetime.utcnow)
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="history")
@@ -34,14 +34,15 @@ class Candidate(Base):
     email = Column(String)
     phone = Column(String)
     resume_text = Column(Text)
-    status = Column(String, default="initial")  # initial, screened, approved, rejected, final_approved
+    status = Column(String, default="new")
     notes = Column(Text)
-    test_results = Column(Text)  # New field for test results
-    video_interview_notes = Column(Text)  # New field for video interview notes
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    test_results = Column(Text, nullable=True)
+    video_interview_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="candidates")
+    status_update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class UserAction(Base):
     __tablename__ = "user_actions"
@@ -49,7 +50,7 @@ class UserAction(Base):
     id = Column(Integer, primary_key=True, index=True)
     action_type = Column(String)  # login, logout, create_candidate, update_candidate, etc.
     description = Column(Text)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
     
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="actions")
@@ -64,4 +65,4 @@ class SystemSettings(Base):
     enable_semantic_search = Column(Boolean, default=True)
     notify_new_candidates = Column(Boolean, default=True)
     notify_status_changes = Column(Boolean, default=True)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
