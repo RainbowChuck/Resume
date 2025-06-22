@@ -772,7 +772,11 @@ def download_history(
     start: str = "",
     end: str = ""
 ):
-    query = db.query(models.SearchHistory).filter(models.SearchHistory.user_id == current_user.id)
+    # For dean, export all users' history; for others, only their own
+    if current_user.role == "dean":
+        query = db.query(models.SearchHistory)
+    else:
+        query = db.query(models.SearchHistory).filter(models.SearchHistory.user_id == current_user.id)
     if city:
         query = query.filter(models.SearchHistory.city.ilike(f"%{city}%"))
     if start:
@@ -786,15 +790,17 @@ def download_history(
             "Запрос": row.query,
             "Дата": row.date.strftime("%Y-%m-%d %H:%M:%S"),
             "Город": row.city,
-            "Результатов": row.results
+            "Результатов": row.results,
+            "Пользователь": row.user.username if hasattr(row, "user") and row.user else ""
         }
         for row in results
     ]
+    import pandas as pd
     df = pd.DataFrame(data)
     file_path = f"/tmp/history_{current_user.id}.xlsx"
     df.to_excel(file_path, index=False)
+    from fastapi.responses import FileResponse
     return FileResponse(file_path, filename="history.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
 @app.get("/history/result/{history_id}", response_class=HTMLResponse)
 def history_result(history_id: int, request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     history = db.query(models.SearchHistory).filter(models.SearchHistory.id == history_id, models.SearchHistory.user_id == current_user.id).first()
