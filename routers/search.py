@@ -91,10 +91,25 @@ def download_history(db: Session = Depends(get_db), current_user: models.User = 
 @router.get("/history/result/{history_id}", response_class=HTMLResponse)
 def history_result(history_id: int, request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     from search_10k import search_resumes
-    history = db.query(models.SearchHistory).filter(models.SearchHistory.id == history_id, models.SearchHistory.user_id == current_user.id).first()
-    if not history: raise HTTPException(status_code=404, detail="История не найдена")
+    # Allow deans to see all histories
+    if current_user.role == "dean":
+        history = db.query(models.SearchHistory).filter(models.SearchHistory.id == history_id).first()
+    else:
+        history = db.query(models.SearchHistory).filter(models.SearchHistory.id == history_id,
+                                                        models.SearchHistory.user_id == current_user.id).first()
+    if not history:
+        # Render an error template instead of JSON error
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "message": "История не найдена"
+        }, status_code=404)
     
     settings = db.query(models.SystemSettings).first()
     results = search_resumes(history.query, model, resumes_data, embeddings)
-    
-    return templates.TemplateResponse("search.html", {"request": request, "results": results, "history_query": history.query, "history_city": history.city, "search_engine": settings.search_engine}) 
+
+    return templates.TemplateResponse("search.html", {
+        "request": request,
+        "results": results,
+        "history_query": history.query,
+        "history_city": history.city,
+        "search_engine": settings.search_engine})

@@ -123,4 +123,8 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Models
+models/retrained_rubert/*
+!models/retrained_rubert/README.md 
