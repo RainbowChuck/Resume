@@ -19,15 +19,21 @@
         .form-group {
             margin-bottom: 15px;
         }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
         label {
             display: block;
             margin-bottom: 5px;
         }
-        input[type="text"], textarea {
+        input[type="text"], textarea, input[type="number"], select {
             width: 100%;
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            box-sizing: border-box;
         }
         button {
             background: #007bff;
@@ -51,6 +57,13 @@
             text-decoration: none;
             color: #007bff;
         }
+        .search-mode-info {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #007bff;
+        }
     </style>
 </head>
 <body>
@@ -59,19 +72,59 @@
         <a href="/history">История поиска</a>
     </div>
     <h1>Поиск резюме</h1>
+    
+    {% if search_engine == "default" %}
+    <div class="search-mode-info">
+        <strong>Режим поиска:</strong> По умолчанию - только текстовый поиск
+    </div>
     <div class="search-form">
         <form method="POST" action="/search">
             <div class="form-group">
                 <label for="query">Поисковый запрос:</label>
-                <textarea name="query" id="query" rows="3" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="city">Город:</label>
-                <input type="text" name="city" id="city">
+                <textarea name="query" id="query" rows="3" required placeholder="Введите описание должности, навыки или требования...">{{ history_query or '' }}</textarea>
             </div>
             <button type="submit">Найти</button>
         </form>
     </div>
+    {% else %}
+    <div class="search-mode-info">
+        <strong>Режим поиска:</strong> Расширенный - с дополнительными фильтрами
+    </div>
+    <div class="search-form">
+        <form method="POST" action="/search">
+            <div class="form-group">
+                <label for="query">Поисковый запрос:</label>
+                <textarea name="query" id="query" rows="3" required placeholder="Введите описание должности, навыки или требования...">{{ history_query or '' }}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="city">Город:</label>
+                    <input type="text" name="city" id="city" placeholder="Например: Москва" value="{{ history_city or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="gender">Пол:</label>
+                    <select name="gender" id="gender">
+                        <option value="">Любой</option>
+                        <option value="male">Мужской</option>
+                        <option value="female">Женский</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="salary_from">Зарплата от:</label>
+                    <input type="number" name="salary_from" id="salary_from" placeholder="Например: 50000">
+                </div>
+                <div class="form-group">
+                    <label for="salary_to">Зарплата до:</label>
+                    <input type="number" name="salary_to" id="salary_to" placeholder="Например: 150000">
+                </div>
+            </div>
+            <button type="submit">Найти</button>
+        </form>
+    </div>
+    {% endif %}
+    
     {% if results %}
     <div class="results">
         <h2>Результаты поиска</h2>

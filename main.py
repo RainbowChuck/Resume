@@ -317,20 +317,96 @@ def search_page(
     db = next(get_db())
     update_user_activity(db, current_user)
     
-    return templates.TemplateResponse("search.html", {"request": request})
+    # Get system settings for search engine configuration
+    settings = db.query(models.SystemSettings).first()
+    if not settings:
+        settings = models.SystemSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    
+    return templates.TemplateResponse("search.html", {
+        "request": request, 
+        "search_engine": settings.search_engine
+    })
 
 @app.post("/search", response_class=HTMLResponse)
 def perform_search(
         request: Request,
         query: str = Form(...),
         city: str = Form(None),
+        gender: str = Form(None),
+        salary_from: str = Form(None),
+        salary_to: str = Form(None),
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
     # Update user activity when they perform searches
     update_user_activity(db, current_user)
     
+    # Convert salary strings to integers if they're not empty
+    salary_from_int = None
+    salary_to_int = None
+    
+    if salary_from and salary_from.strip():
+        try:
+            salary_from_int = int(salary_from)
+        except ValueError:
+            pass
+    
+    if salary_to and salary_to.strip():
+        try:
+            salary_to_int = int(salary_to)
+        except ValueError:
+            pass
+    
+    # Get system settings to determine search mode
+    settings = db.query(models.SystemSettings).first()
+    if not settings:
+        settings = models.SystemSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    
+    # Perform basic search
     results = search_resumes(query, model, resumes_data, embeddings)
+    
+    # Apply additional filters if in advanced mode
+    if settings.search_engine == "advanced":
+        filtered_results = []
+        for result in results:
+            # Filter by city
+            if city and city.strip():
+                if not result.get('localityName') or city.lower() not in result.get('localityName', '').lower():
+                    continue
+            
+            # Filter by salary range
+            if salary_from_int is not None:
+                try:
+                    result_salary = int(result.get('salary', '0').replace(' ', '').replace('₽', ''))
+                    if result_salary < salary_from_int:
+                        continue
+                except (ValueError, AttributeError):
+                    pass
+            
+            if salary_to_int is not None:
+                try:
+                    result_salary = int(result.get('salary', '0').replace(' ', '').replace('₽', ''))
+                    if result_salary > salary_to_int:
+                        continue
+                except (ValueError, AttributeError):
+                    pass
+            
+            # Filter by gender (if available in resume data)
+            if gender and gender.strip():
+                # Note: This would require gender data in your resume dataset
+                # For now, we'll skip gender filtering as it's not in the current data
+                pass
+            
+            filtered_results.append(result)
+        
+        results = filtered_results
+    
     # Save number of results
     search_entry = models.SearchHistory(
         query=query,
@@ -342,13 +418,15 @@ def perform_search(
     db.commit()
     log_user_action(
         db, current_user.id, "search",
-        f"Performed search for '{query}' in '{city}', found {len(results)} results."
+        f"Performed {'advanced' if settings.search_engine == 'advanced' else 'default'} search for '{query}' in '{city}', found {len(results)} results."
     )
     # Store results for add-to-candidates
     user_last_search_results[current_user.id] = results
+    
     return templates.TemplateResponse("search.html", {
-        "request": request,
-        "results": results
+        "request": request, 
+        "results": results,
+        "search_engine": settings.search_engine
     })
 
 @app.post("/candidates/add")
@@ -800,9 +878,24 @@ def history_result(history_id: int, request: Request, db: Session = Depends(get_
     history = db.query(models.SearchHistory).filter(models.SearchHistory.id == history_id, models.SearchHistory.user_id == current_user.id).first()
     if not history:
         raise HTTPException(status_code=404, detail="История не найдена")
+    
+    # Get system settings for search engine configuration
+    settings = db.query(models.SystemSettings).first()
+    if not settings:
+        settings = models.SystemSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    
     # Re-run the search with the stored query and city
     results = search_resumes(history.query, model, resumes_data, embeddings)
-    return templates.TemplateResponse("search.html", {"request": request, "results": results, "history_query": history.query, "history_city": history.city})
+    return templates.TemplateResponse("search.html", {
+        "request": request, 
+        "results": results, 
+        "history_query": history.query, 
+        "history_city": history.city,
+        "search_engine": settings.search_engine
+    })
 
 @app.post("/candidates/{candidate_id}/update_details")
 def update_candidate_details(
@@ -835,3 +928,30 @@ def update_candidate_details(
         f"Details for candidate {candidate_id} updated."
     )
     return RedirectResponse(url=f"/candidates/{candidate_id}", status_code=302)
+
+# Add custom Jinja2 filter for parsing resume data
+import ast
+import json
+
+def parse_resume_data(resume_text):
+    """Parse resume data from string representation to dictionary"""
+    if not resume_text:
+        return None
+    
+    try:
+        # First try to parse as JSON
+        return json.loads(resume_text)
+    except json.JSONDecodeError:
+        try:
+            # If JSON fails, try to parse as Python literal
+            # Replace single quotes with double quotes for JSON compatibility
+            cleaned_text = resume_text.replace("'", '"').replace("True", "true").replace("False", "false").replace("None", "null")
+            return json.loads(cleaned_text)
+        except (json.JSONDecodeError, ValueError):
+            try:
+                # Last resort: use ast.literal_eval for Python literal
+                return ast.literal_eval(resume_text)
+            except (ValueError, SyntaxError):
+                return None
+
+templates.env.filters["parse_resume"] = parse_resume_data

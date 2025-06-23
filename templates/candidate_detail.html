@@ -105,6 +105,57 @@
             white-space: pre-wrap;
             color: #212529;
         }
+        .resume-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 15px;
+        }
+        .resume-field {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .field-label {
+            font-weight: bold;
+            color: #495057;
+            min-width: 150px;
+            flex-shrink: 0;
+        }
+        .field-value {
+            margin-left: 10px;
+            color: #212529;
+            flex: 1;
+        }
+        .skills-list {
+            margin-top: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .skill-tag {
+            background: #007bff;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+        .raw-resume {
+            margin-top: 15px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .raw-resume pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -177,8 +228,47 @@
     </div>
 
     <div class="resume-text">
-        <h3>Текст резюме:</h3>
-        {{ candidate.resume_text }}
+        <h3>Информация о резюме:</h3>
+        {% if candidate.resume_text %}
+            {% set resume_dict = candidate.resume_text | parse_resume %}
+            {% if resume_dict %}
+                <div class="resume-info">
+                    <div class="resume-field">
+                        <span class="field-label">Должность:</span>
+                        <span class="field-value">{{ resume_dict.positionName or 'Не указана' }}</span>
+                    </div>
+                    <div class="resume-field">
+                        <span class="field-label">Опыт работы:</span>
+                        <span class="field-value">{{ resume_dict.experience or 'Не указан' }}</span>
+                    </div>
+                    <div class="resume-field">
+                        <span class="field-label">Город:</span>
+                        <span class="field-value">{{ resume_dict.localityName or 'Не указан' }}</span>
+                    </div>
+                    <div class="resume-field">
+                        <span class="field-label">Желаемая зарплата:</span>
+                        <span class="field-value">{{ resume_dict.salary or 'Не указана' }}</span>
+                    </div>
+                    {% if resume_dict.hardSkills %}
+                    <div class="resume-field">
+                        <span class="field-label">Навыки:</span>
+                        <div class="skills-list">
+                            {% for skill in resume_dict.hardSkills %}
+                                <span class="skill-tag">{{ skill.strip() }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="raw-resume">
+                    <p><strong>Сырые данные резюме:</strong></p>
+                    <pre>{{ candidate.resume_text }}</pre>
+                </div>
+            {% endif %}
+        {% else %}
+            <p>Информация о резюме отсутствует.</p>
+        {% endif %}
     </div>
 
     {% if current_user.role == "hr" %}
