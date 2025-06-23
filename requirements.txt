@@ -12,4 +12,7 @@ ijson
 tqdm
 torch
 numpy
-pymorphy2 
+pymorphy2
+# Additional dependencies for better compatibility
+python-multipart
+jinja2 

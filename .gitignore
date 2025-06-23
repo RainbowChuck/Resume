@@ -119,6 +119,7 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+!app.db
 
 # Temporary files
 *.tmp
