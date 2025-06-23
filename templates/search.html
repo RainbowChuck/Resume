@@ -141,6 +141,7 @@
             <tr>
                 <td>
                     <form method="post" action="/candidates/add" style="margin:0;">
+                        <input type="hidden" name="search_history_id" value="{{ search_history_id }}">
                         <input type="hidden" name="positionName" value="{{ result.positionName }}">
                         <input type="hidden" name="experience" value="{{ result.experience }}">
                         <input type="hidden" name="localityName" value="{{ result.localityName }}">

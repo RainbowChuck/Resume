@@ -1,40 +1,14 @@
-import json
-import re
+from datetime import datetime
+from sqlalchemy.orm import Session
+import models
 
-def clean_text(text):
-    text = re.sub(r"<.*?>", "", text)
-    text = re.sub(r"[^а-яА-Яa-zA-Z\s]", " ", text)
-    text = text.lower()
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+def update_user_activity(db: Session, user: models.User):
+    """Update user's last activity timestamp."""
+    user.last_activity = datetime.utcnow()
+    db.commit()
 
-def extract_resume_text(resume):
-    parts = [
-        resume.get("positionName", ""),
-        resume.get("education", ""),
-        str(resume.get("experience", "")),
-        resume.get("scheduleType", ""),
-        str(resume.get("salary", "")),
-        resume.get("retrainingCapability", ""),
-        resume.get("relocation", ""),
-        resume.get("businessTrip", ""),
-        resume.get("gender", ""),
-        resume.get("localityName", "")
-    ]
-
-    for edu in resume.get("educationList", []):
-        parts.append(edu.get("instituteName", ""))
-        parts.append(str(edu.get("graduateYear", "")))
-
-    for prof in resume.get("professionList", []):
-        parts.append(prof.get("codeProfessionalSphere", ""))
-
-    for lang in resume.get("languageKnowledge", []):
-        parts.append(lang.get("codeLanguage", ""))
-        parts.append(lang.get("level", ""))
-
-    for country in resume.get("country", []):
-        parts.append(country.get("countryName", ""))
-
-    raw = " ".join(str(p).strip() for p in parts if p)
-    return clean_text(raw)
+def log_user_action(db: Session, user_id: int, action_type: str, description: str):
+    """Log a user action to the database."""
+    action = models.UserAction(user_id=user_id, action_type=action_type, description=description)
+    db.add(action)
+    db.commit()

@@ -15,4 +15,5 @@ numpy
 pymorphy2
 # Additional dependencies for better compatibility
 python-multipart
-jinja2 
+jinja2
+datasets 

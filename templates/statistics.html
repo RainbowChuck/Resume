@@ -102,13 +102,13 @@
 </head>
 <body>
     <div class="nav-links">
-        <a href="/dashboard">← Назад к панели управления</a>
+        <a href="/admin/dashboard">← Назад к панели управления</a>
     </div>
 
     <h1>Статистика системы</h1>
 
     <div class="filter-section">
-        <form class="filter-form" method="GET">
+        <form class="filter-form" method="GET" action="/admin/statistics">
             <div class="form-group">
                 <label for="start_date">Начальная дата:</label>
                 <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
@@ -158,9 +158,9 @@
         new Chart(candidateStatusCtx, {
             type: 'pie',
             data: {
-                labels: {{ candidate_status_labels | tojson }},
+                labels: {{ candidate_status_labels | safe }},
                 datasets: [{
-                    data: {{ candidate_status_data | tojson }},
+                    data: {{ candidate_status_data | safe }},
                     backgroundColor: [
                         '#28a745',
                         '#ffc107',
@@ -177,10 +177,10 @@
         new Chart(userActivityCtx, {
             type: 'line',
             data: {
-                labels: {{ activity_dates | tojson }},
+                labels: {{ activity_dates | safe }},
                 datasets: [{
                     label: 'Активность пользователей',
-                    data: {{ activity_counts | tojson }},
+                    data: {{ activity_counts | safe }},
                     borderColor: '#007bff',
                     tension: 0.1
                 }]

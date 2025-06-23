@@ -2,7 +2,7 @@ import os
 import pickle
 from sklearn.neighbors import NearestNeighbors
 from sentence_transformers import SentenceTransformer
-from utils import extract_resume_text
+from resume_pipeline import extract_resume_text
 
 EMBEDDINGS_PATH = os.path.join("models", "resume_embeddings_10k.pkl")
 MAP_PATH = os.path.join("models", "resume_id_map_10k.pkl")
@@ -29,7 +29,7 @@ def search_resumes(query_text, model, resumes, embeddings, top_k=10, city=None, 
         pos_tokens = set(resume.get("positionName", "").lower().split())
         skills = set(resume.get("hardSkills", []))
         keywords = set(query["hardSkills"])
-        strong_keywords = {"история", "учитель", "обществознание"}
+        strong_keywords = {"история", "учитель", "обществознание, преподаватель"}
 
         pos_match = len(keywords & pos_tokens)
         strong_match = len(strong_keywords & pos_tokens)

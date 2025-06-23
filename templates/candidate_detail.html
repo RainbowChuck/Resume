@@ -160,7 +160,11 @@
 </head>
 <body>
     <div class="nav-links">
-        <a href="/candidates">← К списку кандидатов</a>
+        {% if current_user.role == "dean" %}
+            <a href="/dean/candidates">← К списку кандидатов</a>
+        {% else %}
+            <a href="/candidates">← К списку кандидатов</a>
+        {% endif %}
         <a href="/dashboard">На главную</a>
     </div>
 

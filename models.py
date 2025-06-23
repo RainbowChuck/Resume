@@ -44,6 +44,8 @@ class Candidate(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="candidates")
     status_update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    search_history_id = Column(Integer, ForeignKey("search_history.id"), nullable=True)
+    search_history = relationship("SearchHistory")
 
 class UserAction(Base):
     __tablename__ = "user_actions"
